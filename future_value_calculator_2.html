@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Future Value Calculator</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            max-width: 500px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .calculator {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            margin: 0 0 25px 0;
+            font-size: 24px;
+            color: #333;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-size: 14px;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin-top: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            display: none;
+        }
+        .result.show {
+            display: block;
+        }
+        .result-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #28a745;
+            margin: 10px 0;
+        }
+        .calculation {
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <h1>Future Value Calculator</h1>
+        
+        <div class="input-group">
+            <label for="current">Current Value ($)</label>
+            <input type="text" id="current" placeholder="10000" inputmode="numeric">
+        </div>
+        
+        <div class="input-group">
+            <label for="rate">Annual Rate of Return (%)</label>
+            <input type="number" id="rate" placeholder="7" step="0.01">
+        </div>
+        
+        <div class="input-group">
+            <label for="years">Number of Years</label>
+            <input type="number" id="years" placeholder="10" step="1">
+        </div>
+        
+        <div class="input-group">
+            <label for="contributionFreq">Contribution Frequency</label>
+            <select id="contributionFreq" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px;">
+                <option value="annual">Annual</option>
+                <option value="monthly">Monthly</option>
+            </select>
+        </div>
+        
+        <div class="input-group">
+            <label for="contribution">Contribution Amount ($) - Optional</label>
+            <input type="number" id="contribution" placeholder="0" step="0.01">
+        </div>
+        
+        <div class="input-group">
+            <label for="contributionGrowth">Contribution Growth Rate (% per year) - Optional</label>
+            <input type="number" id="contributionGrowth" placeholder="0" step="0.01">
+        </div>
+        
+        <div class="input-group">
+            <label for="inflation">Inflation Rate (%) - Optional</label>
+            <input type="number" id="inflation" placeholder="0" step="0.01">
+        </div>
+        
+        <button onclick="calculate()">Calculate</button>
+        
+        <div id="result" class="result">
+            <div style="color: #555; font-size: 14px;">Future Value</div>
+            <div class="result-value" id="futureValue">$0.00</div>
+            <div class="calculation" id="calculation"></div>
+        </div>
+    </div>
+
+    <script>
+        // Format current value input with commas
+        const currentInput = document.getElementById('current');
+        
+        currentInput.addEventListener('input', function(e) {
+            // Remove all non-numeric characters except decimal point
+            let value = e.target.value.replace(/[^\d.]/g, '');
+            
+            // Only allow one decimal point
+            const parts = value.split('.');
+            if (parts.length > 2) {
+                value = parts[0] + '.' + parts.slice(1).join('');
+            }
+            
+            // Format with commas
+            if (value !== '') {
+                const [whole, decimal] = value.split('.');
+                const formatted = parseInt(whole || 0).toLocaleString('en-US');
+                e.target.value = decimal !== undefined ? formatted + '.' + decimal : formatted;
+            }
+        });
+        
+        function calculate() {
+            const current = parseFloat(document.getElementById('current').value.replace(/,/g, '')) || 0;
+            const rate = parseFloat(document.getElementById('rate').value);
+            const years = parseInt(document.getElementById('years').value);
+            const contribution = parseFloat(document.getElementById('contribution').value) || 0;
+            const contributionGrowth = parseFloat(document.getElementById('contributionGrowth').value) || 0;
+            const inflation = parseFloat(document.getElementById('inflation').value) || 0;
+            const isMonthly = document.getElementById('contributionFreq').value === 'monthly';
+            
+            if (isNaN(rate) || isNaN(years)) {
+                alert('Please fill in rate and years');
+                return;
+            }
+            
+            const r = rate / 100;
+            const i = inflation / 100;
+            const g = contributionGrowth / 100;
+            
+            // FV of initial amount: PV × (1 + r)^n
+            const fvInitial = current * Math.pow(1 + r, years);
+            
+            // Calculate contributions with growth
+            let fvContributions = 0;
+            let totalContributed = 0;
+            
+            if (contribution > 0) {
+                if (isMonthly) {
+                    // Monthly contributions with annual growth and monthly compounding
+                    const monthlyRate = Math.pow(1 + r, 1/12) - 1;
+                    
+                    for (let year = 0; year < years; year++) {
+                        const yearlyContribution = contribution * Math.pow(1 + g, year);
+                        totalContributed += yearlyContribution * 12;
+                        
+                        // FV of this year's monthly contributions
+                        const monthsRemaining = (years - year) * 12;
+                        const fvThisYear = yearlyContribution * ((Math.pow(1 + monthlyRate, monthsRemaining) - 1) / monthlyRate);
+                        fvContributions += fvThisYear;
+                    }
+                } else {
+                    // Annual contributions with growth
+                    if (g === 0) {
+                        // No growth in contributions
+                        if (r !== 0) {
+                            fvContributions = contribution * ((Math.pow(1 + r, years) - 1) / r);
+                        } else {
+                            fvContributions = contribution * years;
+                        }
+                        totalContributed = contribution * years;
+                    } else {
+                        // Growing contributions (growing annuity)
+                        for (let year = 0; year < years; year++) {
+                            const yearlyContribution = contribution * Math.pow(1 + g, year);
+                            totalContributed += yearlyContribution;
+                            const yearsRemaining = years - year;
+                            fvContributions += yearlyContribution * Math.pow(1 + r, yearsRemaining);
+                        }
+                    }
+                }
+            }
+            
+            const futureValue = fvInitial + fvContributions;
+            const realValue = futureValue / Math.pow(1 + i, years);
+            
+            document.getElementById('futureValue').textContent = 
+                '$' + futureValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            
+            let calcText = `<strong>Initial Value Growth:</strong> $${current.toLocaleString()} × (1.0${(r*100).toFixed(2)})^${years} = $${fvInitial.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            
+            if (contribution > 0) {
+                const freq = isMonthly ? 'monthly' : 'annual';
+                calcText += `<br><strong>Contribution Growth:</strong> ${freq} contributions = $${fvContributions.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                calcText += `<br><strong>Total Contributed:</strong> $${totalContributed.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                if (contributionGrowth > 0) {
+                    calcText += ` (growing at ${contributionGrowth}%/year)`;
+                }
+            }
+            
+            calcText += `<br><strong>Total Growth:</strong> $${(futureValue - current - totalContributed).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            
+            if (inflation > 0) {
+                calcText += `<br><br><strong>Inflation-Adjusted Value:</strong> $${realValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (in today's dollars)`;
+                const realReturn = ((1 + r) / (1 + i) - 1) * 100;
+                calcText += `<br><strong>Real Rate of Return:</strong> ${realReturn.toFixed(2)}%`;
+            }
+            
+            document.getElementById('calculation').innerHTML = calcText;
+            document.getElementById('result').classList.add('show');
+        }
+        
+        // Allow Enter key to calculate
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') calculate();
+            });
+        });
+    </script>
+</body>
+</html>
